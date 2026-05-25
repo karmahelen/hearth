@@ -1,0 +1,117 @@
+@media (max-width: 600px) {
+    /* Stack layout vertically on mobile */
+    #main {
+        flex-direction: column;
+    }
+
+    /* Topbar: trim the password, aliases, and launchers button labels so they don't crowd the row */
+    #btn-set-password, #btn-aliases, #btn-launchers {
+        padding: 0 8px;
+        font-size: 10px;
+    }
+
+    .modal-panel {
+        min-width: 0;
+        width: calc(100vw - 24px);
+        padding: 16px 18px;
+    }
+
+    /* The aliases table panel uses its own min-width on desktop — override on mobile */
+    .modal-panel-wide {
+        min-width: 0;
+        max-width: none;
+    }
+
+    .aliases-table-wrap {
+        max-height: 50vh;
+    }
+
+    .aliases-table th, .aliases-table td {
+        padding: 6px 8px;
+    }
+
+    .alias-input {
+        font-size: 16px;  /* suppress iOS auto-zoom */
+    }
+
+    .launchers-table-wrap {
+        max-height: 50vh;
+    }
+
+    .launchers-table th, .launchers-table td {
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+
+    .launchers-table .col-toggle {
+        width: 50px;
+    }
+
+    .launchers-table .col-category {
+        width: 90px;
+    }
+
+    .launcher-category-select {
+        font-size: 12px;
+    }
+
+    /* Use 16px on the password input to suppress iOS auto-zoom */
+    .password-input {
+        font-size: 16px;
+    }
+
+    #app-list {
+        width: 100%;
+        min-width: unset;
+        max-height: 200px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+
+    #apps-container {
+        padding: 0 6px 6px;
+    }
+
+    .app-row {
+        padding: 10px 10px;
+        min-height: 40px;
+    }
+
+    .btn-start, .btn-stop {
+        padding: 5px 12px;
+        font-size: 11px;
+        min-height: 32px;
+    }
+
+    .port-input {
+        width: 54px;
+        font-size: 16px;
+        padding: 5px 6px;
+        min-height: 32px;
+    }
+
+    #log-output {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+
+    .btn-clear {
+        padding: 5px 10px;
+        min-height: 32px;
+    }
+
+    input, textarea, select {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 380px) {
+    .app-name {
+        font-size: 11.5px;
+    }
+
+    #log-output {
+        padding: 6px 8px;
+        font-size: 10.5px;
+    }
+}

@@ -1,0 +1,3 @@
+[submodule "xpwpatchbay"]
+	path = xpwpatchbay
+	url = https://github.com/karmahelen/xpwpatchbay.git

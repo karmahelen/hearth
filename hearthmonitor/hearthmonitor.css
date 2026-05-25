@@ -1,0 +1,825 @@
+:root {
+    --bg: #0c0c10;
+    --bg-raised: #141419;
+    --bg-hover: #1c1c24;
+    --bg-selected: #1f1f2a;
+    --border: #2a2a36;
+    --text: #c8c8d4;
+    --text-dim: #6e6e82;
+    --text-bright: #e8e8f0;
+    --accent: #5a9e6f;
+    --accent-dim: #3d6d4c;
+    --danger: #b35454;
+    --danger-dim: #7a3a3a;
+    --stderr: #c47a5a;
+    --stdout: #8a8a9e;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'DejaVu Sans Mono', monospace;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* Topbar */
+
+#topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 16px;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#btn-set-password, #btn-aliases, #btn-launchers {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 12px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+#btn-set-password:hover, #btn-aliases:hover, #btn-launchers:hover {
+    color: var(--text);
+    border-color: var(--text-dim);
+    background: var(--bg-hover);
+}
+
+.logo-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.logo {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-bright);
+    letter-spacing: 0.02em;
+}
+
+#btn-settings {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+#btn-settings:hover {
+    color: var(--text);
+    border-color: var(--text-dim);
+    background: var(--bg-hover);
+}
+
+/* Main layout */
+
+#main {
+    display: flex;
+    height: calc(100% - 44px);
+}
+
+/* App list sidebar */
+
+#app-list {
+    width: 360px;
+    min-width: 360px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-raised);
+}
+
+.section-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 12px 8px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#btn-refresh {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 14px;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-family: inherit;
+    /* Pull text-transform off the inherited section-label style — the
+       glyph isn't text and shouldn't be affected by uppercase. */
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+#btn-refresh:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+#apps-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 6px 12px;
+}
+
+.app-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.12s;
+    margin-bottom: 1px;
+}
+
+.app-row:hover {
+    background: var(--bg-hover);
+}
+
+.app-row.selected {
+    background: var(--bg-selected);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.3s;
+}
+
+.status-dot.running {
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-dim);
+}
+
+.status-dot.exited {
+    background: var(--danger);
+    box-shadow: 0 0 6px var(--danger-dim);
+}
+
+.app-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rename-input {
+    flex: 1;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-bright);
+    background: var(--bg);
+    border: 1px solid var(--text-dim);
+    border-radius: 3px;
+    padding: 3px 6px;
+    margin: -4px 0;  /* keep row height stable when input replaces span */
+    outline: none;
+    min-width: 0;    /* allow flex child to shrink instead of overflowing */
+}
+
+.rename-input:focus {
+    border-color: var(--accent);
+}
+
+.app-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-start, .btn-stop, .btn-open {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-start {
+    background: var(--accent-dim);
+    color: var(--text-bright);
+}
+
+.btn-start:hover {
+    background: var(--accent);
+}
+
+.btn-stop {
+    background: var(--danger-dim);
+    color: var(--text-bright);
+}
+
+.btn-stop:hover {
+    background: var(--danger);
+}
+
+/* OPEN button — yellow, distinct from the green Serve and red Stop. Means
+   "launch this app in a window on this machine," as opposed to serve mode
+   which makes it accessible to other devices on the LAN. */
+.btn-open {
+    background: #8a6d20;  /* dim yellow */
+    color: var(--text-bright);
+}
+
+.btn-open:hover {
+    background: #c19838;  /* brighter yellow on hover */
+}
+
+.port-input {
+    width: 52px;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 4px 5px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--text);
+    text-align: center;
+    margin-right: 4px;
+    outline: none;
+}
+
+.port-input:focus {
+    border-color: var(--text-dim);
+}
+
+.port-input::placeholder {
+    color: var(--text-dim);
+    opacity: 0.6;
+}
+
+.port-label {
+    font-size: 13px;
+    color: var(--accent);
+    margin-right: 6px;
+}
+
+.no-apps {
+    padding: 16px;
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+}
+
+/* Log panel */
+
+#log-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+#log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 38px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#log-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dim);
+}
+
+.log-title-anchor {
+    color: var(--text-dim);
+    opacity: 0.6;
+    font-size: 12px;
+    margin-left: 2px;
+}
+
+.btn-clear {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-clear:hover {
+    color: var(--text);
+    border-color: var(--text-dim);
+}
+
+#log-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.log-line {
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--stdout);
+}
+
+.log-line.err {
+    color: var(--stderr);
+}
+
+.log-line.meta {
+    color: var(--text-bright);
+    font-weight: 500;
+}
+
+/* Scrollbar styling */
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-dim);
+}
+
+/* Modal dialog (password) */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-panel {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 22px;
+    min-width: 380px;
+    max-width: 90vw;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 14px;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.password-input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+}
+
+.password-input:focus {
+    border-color: var(--text-dim);
+}
+
+.modal-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.4;
+}
+
+.modal-note-dim {
+    opacity: 0.7;
+}
+
+.modal-warning {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--stderr);
+    line-height: 1.4;
+}
+
+.modal-warning.hidden {
+    display: none;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.btn-modal-primary, .btn-modal-secondary {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 6px 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-modal-secondary {
+    background: none;
+    color: var(--text-dim);
+}
+
+.btn-modal-secondary:hover {
+    color: var(--text);
+    border-color: var(--text-dim);
+}
+
+.btn-modal-primary {
+    background: var(--accent-dim);
+    color: var(--text-bright);
+    border-color: var(--accent-dim);
+}
+
+.btn-modal-primary:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.btn-modal-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* App Aliases panel */
+
+.modal-panel-wide {
+    min-width: 520px;
+    max-width: 720px;
+    width: 90vw;
+}
+
+.aliases-table-wrap {
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+
+.aliases-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.aliases-table thead {
+    position: sticky;
+    top: 0;
+    background: var(--bg-raised);
+    z-index: 1;
+}
+
+.aliases-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.aliases-table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.aliases-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.aliases-table .col-anchor {
+    color: var(--text);
+    font-weight: 500;
+    width: 40%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.aliases-table .col-alias {
+    width: 60%;
+}
+
+.alias-input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+}
+
+.alias-input:focus {
+    border-color: var(--text-dim);
+}
+
+.alias-input::placeholder {
+    color: var(--text-dim);
+    opacity: 0.5;
+    font-style: italic;
+}
+
+/* Launchers panel */
+
+.launchers-table-wrap {
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 8px 0 4px;
+}
+
+.launchers-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.launchers-table thead {
+    position: sticky;
+    top: 0;
+    background: var(--bg-raised);
+    z-index: 1;
+}
+
+.launchers-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.launchers-table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.launchers-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.launchers-table .col-anchor {
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.launchers-table .col-toggle {
+    text-align: center;
+    width: 90px;
+}
+
+.launchers-table .col-category {
+    width: 130px;
+}
+
+.launcher-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+.launcher-category-select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+}
+
+.launcher-category-select:focus {
+    border-color: var(--text-dim);
+}
+
+/* Settings modal (cogwheel) — vertical-form layout for the monitor's
+   own preferences, distinct from the table-style operated-apps panels. */
+
+.settings-section-label {
+    margin-top: 14px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+}
+
+.settings-section-label:first-of-type {
+    margin-top: 6px;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 6px 0;
+}
+
+.settings-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.settings-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+.settings-field-label {
+    font-size: 13px;
+    color: var(--text);
+    min-width: 80px;
+}
+
+#settings-category {
+    flex: 1;
+    max-width: 200px;
+}
+
+/* Toast notifications — transient feedback messages stacked at bottom-right.
+   Used by the OPEN button to confirm spawns, report already-open, and surface
+   spawn failures. Three kinds (success/info/error) with distinct colors but
+   the same shape and behavior. */
+
+#toast-container {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    z-index: 1000;
+    pointer-events: none;  /* let clicks pass through gaps between toasts */
+}
+
+.toast {
+    pointer-events: auto;  /* but the toasts themselves are clickable */
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-bright);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    border-left: 3px solid transparent;
+    background: var(--bg-raised);
+    max-width: 380px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.toast-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-leaving {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+
+.toast-success {
+    border-left-color: var(--accent);
+}
+
+.toast-info {
+    border-left-color: var(--text-dim);
+}
+
+.toast-error {
+    border-left-color: var(--danger);
+}

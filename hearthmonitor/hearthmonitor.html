@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hearth Monitor</title>
+<link rel="stylesheet" href="hearthmonitor.css">
+<link rel="stylesheet" href="hearthmonitor-mobile.css">
+</head>
+<body>
+    <div id="topbar">
+        <div class="topbar-left">
+            <img src="hearthmonitor.ico" class="logo-icon" alt="">
+            <span class="logo">Hearth Monitor</span>
+        </div>
+        <div class="topbar-right">
+            <button id="btn-launchers" onclick="openLaunchersDialog()" title="Create or remove desktop and start menu launchers">Launchers</button>
+            <button id="btn-aliases" onclick="openAliasesDialog()" title="View and edit all app aliases">Aliases</button>
+            <button id="btn-set-password" onclick="openPasswordDialog()" title="Change Hearth password">Password</button>
+            <button id="btn-settings" onclick="openSettingsDialog()" title="Hearth Monitor settings">&#x2699;</button>
+        </div>
+    </div>
+
+    <div id="main">
+        <div id="app-list">
+            <div class="section-label">
+                <span>Apps</span>
+                <button id="btn-refresh" onclick="refreshApps()" title="Refresh app list">&#x21bb;</button>
+            </div>
+            <div id="apps-container"></div>
+        </div>
+        <div id="log-panel">
+            <div id="log-header">
+                <span id="log-title">Select an app</span>
+                <div id="log-actions"></div>
+            </div>
+            <div id="log-output"></div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay hidden" onclick="onSettingsBackdropClick(event)">
+        <div class="modal-panel" onclick="event.stopPropagation()">
+            <div class="modal-title">Hearth Monitor Settings</div>
+
+            <div class="settings-row">
+                <label class="settings-checkbox-label" title="When unchecked, apps run directly via their shebang and you manage Python and packages yourself">
+                    <input type="checkbox" id="settings-use-uv">
+                    <span>Run using uv</span>
+                </label>
+            </div>
+            <div id="settings-uv-banner" class="modal-warning hidden"></div>
+
+            <div class="settings-section-label">Launcher</div>
+            <div class="settings-row">
+                <label class="settings-checkbox-label">
+                    <input type="checkbox" id="settings-start-menu">
+                    <span>Start Menu</span>
+                </label>
+                <label class="settings-checkbox-label">
+                    <input type="checkbox" id="settings-desktop">
+                    <span>Desktop</span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <label class="settings-field-label" for="settings-category">Category</label>
+                <select id="settings-category" class="launcher-category-select"></select>
+            </div>
+            <div class="settings-row">
+                <label class="settings-checkbox-label" title="Run in a terminal window (useful for debugging)">
+                    <input type="checkbox" id="settings-terminal">
+                    <span>Terminal (run in terminal window for debugging)</span>
+                </label>
+            </div>
+
+            <div class="settings-section-label">Tray</div>
+            <div class="settings-row">
+                <label class="settings-checkbox-label">
+                    <input type="checkbox" id="settings-tray">
+                    <span>Run in system tray</span>
+                </label>
+            </div>
+
+            <div class="modal-note modal-note-dim hidden" id="settings-takes-effect">Terminal and Tray takes effect on next launch.</div>
+            <div class="modal-warning hidden" id="settings-error"></div>
+            <div class="modal-buttons">
+                <button class="btn-modal-secondary" onclick="closeSettingsDialog()">Cancel</button>
+                <button id="btn-settings-apply" class="btn-modal-primary" onclick="applySettingsDialog()" disabled>Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="launchers-modal" class="modal-overlay hidden" onclick="onLaunchersBackdropClick(event)">
+        <div class="modal-panel modal-panel-wide" onclick="event.stopPropagation()">
+            <div class="modal-title">App Launchers</div>
+            <div id="launchers-uv-banner" class="modal-warning hidden"></div>
+            <div class="launchers-table-wrap">
+                <table class="launchers-table">
+                    <thead>
+                        <tr>
+                            <th class="col-anchor">App</th>
+                            <th class="col-toggle" title="Show in start menu (~/.local/share/applications/)">Start Menu</th>
+                            <th class="col-toggle" title="Place icon on desktop (~/Desktop/)">Desktop</th>
+                            <th class="col-category">Category</th>
+                            <th class="col-toggle" title="Run in a terminal window (useful for debugging)">Terminal</th>
+                            <th class="col-toggle" title="Run in system tray — closing the window hides it instead of quitting">Tray</th>
+                        </tr>
+                    </thead>
+                    <tbody id="launchers-tbody"></tbody>
+                </table>
+            </div>
+            <div class="modal-note">Unchecking Start Menu or Desktop will remove respective launcher files if they exist.</div>
+            <div class="modal-note modal-note-dim">Terminal and Tray takes effect on next app open.</div>
+            <div class="modal-warning hidden" id="launchers-error"></div>
+            <div class="modal-buttons">
+                <button class="btn-modal-secondary" onclick="closeLaunchersDialog()">Cancel</button>
+                <button id="btn-launchers-apply" class="btn-modal-primary" onclick="applyLaunchersDialog()" disabled>Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="aliases-modal" class="modal-overlay hidden" onclick="onAliasesBackdropClick(event)">
+        <div class="modal-panel modal-panel-wide" onclick="event.stopPropagation()">
+            <div class="modal-title">App Aliases</div>
+            <div class="aliases-table-wrap">
+                <table class="aliases-table">
+                    <thead>
+                        <tr>
+                            <th class="col-anchor">App</th>
+                            <th class="col-alias">Alias</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aliases-tbody"></tbody>
+                </table>
+            </div>
+            <div class="modal-note">Empty alias means the app's default name is used.</div>
+            <div class="modal-note modal-note-dim">Takes effect on next app serve/open.</div>
+            <div class="modal-warning hidden" id="aliases-error"></div>
+            <div class="modal-buttons">
+                <button id="btn-aliases-cancel" class="btn-modal-secondary" onclick="closeAliasesDialog()">Cancel</button>
+                <button id="btn-aliases-apply" class="btn-modal-primary" onclick="applyAliasesDialog()" disabled>Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="password-modal" class="modal-overlay hidden" onclick="onModalBackdropClick(event)">
+        <div class="modal-panel" onclick="event.stopPropagation()">
+            <div class="modal-title">Hearth Password</div>
+            <input type="text" id="password-input" class="password-input" autocomplete="off" spellcheck="false">
+            <div class="modal-note" id="password-note-static">Empty password disables authentication for serve mode.</div>
+            <div class="modal-note modal-note-dim">Takes effect on next app serve.</div>
+            <div class="modal-warning hidden" id="password-note-warning">&#9432; Authentication will be disabled.</div>
+            <div class="modal-buttons">
+                <button id="btn-pw-cancel" class="btn-modal-secondary" onclick="closePasswordDialog()">Cancel</button>
+                <button id="btn-pw-apply" class="btn-modal-primary" onclick="applyPasswordDialog()" disabled>Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="hearthmonitor.js"></script>
+</body>
+</html>
