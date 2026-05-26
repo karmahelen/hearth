@@ -21,7 +21,7 @@ Authentication (serve mode only):
     When present, serve mode requires login. Local mode is unaffected.
 
 Developer:  KarmaHelen
-Contact:    <email>
+Contact:    hearth.visible772@passinbox.com
 Support:    https://buymeacoffee.com/karmahelen
 """
 

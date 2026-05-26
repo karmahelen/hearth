@@ -17,7 +17,7 @@ Run:
     [uv run] hearthmonitor.py            # native window
 
 Developer:  KarmaHelen
-Contact:    <email>
+Contact:    hearth.visible772@passinbox.com
 Support:    https://buymeacoffee.com/karmahelen
 """
 

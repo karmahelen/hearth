@@ -45,7 +45,10 @@ NOTE: If you decided not to install UV and manage the python packages manually, 
 [![View App Pics](https://img.shields.io/badge/App-Pics-blue)](https://karmahelen.github.io/hearth/AppPics.html)
 
 ## Background
-I started development of this project for my own personal purposes on my Linux Mint. As I started building it up, I thought that this might be worthwhile to share. As a solo developer, I have currently only been able to fully test it out on Linux Mint 22.2 Cinnamon. I believe it should work with current releases of Ubuntu and potentially other similar Linux distros. If I can strike up interest, I would love to continue developing this for a broader audience but I need feedback. You can reach out to me at: 
+I started development of this project for my own personal purposes on my Linux Mint. As I started building it up, I thought that this might be worthwhile to share. As a solo developer, I have currently only been able to fully test it out on Linux Mint 22.2 Cinnamon. I believe it should work with current releases of Ubuntu and potentially other similar Linux distros. If I can strike up interest, I would love to continue developing this for a broader audience but I need feedback. You can reach out to me at:
+
+hearth.visible772@passinbox.com
+(I am using an email alias for filtering purposes and this is what I was able to create)
 
 I am still working on better documentation to describe the functionality and features but am waiting to see if there is any real interest before spending too much effort.
 
