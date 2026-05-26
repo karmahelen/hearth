@@ -39,7 +39,7 @@ After installing, go to the hearthmonitor directory and run the following from t
 
     uv run hearthmonitor.py
 
-NOTE: If you decided not to install UV and manage the python packages manually, then you can just double-click on hearthmonitor.py (or run ./hearthmonitor.py from terminal). Make sure to go to the settings (cogwheel button in top-left corner) and un-check "Run using uv".
+NOTE: If you decided not to install UV and manage the python packages manually, then you can just double-click on hearthmonitor.py (or run ./hearthmonitor.py from terminal). Make sure to go to the settings (cogwheel button in top-right corner) and un-check "Run using uv".
 
 Everything is self-contained to the folder you install to so if you don't like it you can just delete the folder to remove. If you do install UV, that is doing it's own thing and you have to look at their documentation for removal/clean-up.
 
