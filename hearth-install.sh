@@ -34,9 +34,6 @@ METADATA_EXCLUDES=(
     ".gitignore"
     ".gitmodules"
     "hearth-install.sh"
-    "hearth-sys-depends.sh"
-    "AppPics"
-    "AppPics.html"
 )
 
 # === Globals ===
@@ -87,6 +84,10 @@ build_rsync_excludes() {
 
 # Detect whether rsync would change anything between source and dest.
 # Uses checksum-based comparison (-c) since fresh clones have current mtimes.
+# The itemize format is "YX........" where Y (position 1) is the operation
+# (>, c, h, < = transfer/create; . = attribute-only; * = message). Matching
+# lines that START with an operation char captures real content/structural
+# changes while ignoring timestamp-only (".f..t...") diffs from the fresh clone.
 # Returns 0 if changes would happen, 1 otherwise.
 has_changes() {
     local source="$1"
@@ -94,11 +95,8 @@ has_changes() {
 
     build_rsync_excludes "$source"
 
-    local output
-    output=$(rsync -anc --itemize-changes "${RSYNC_EXCLUDES[@]}" "$source/" "$dest/" 2>/dev/null \
-        | awk '/^[<>ch].f/')
-
-    [[ -n "$output" ]]
+    rsync -anc --itemize-changes "${RSYNC_EXCLUDES[@]}" "$source/" "$dest/" 2>/dev/null \
+        | grep -qE '^[<>ch]'
 }
 
 # Show a list of files that would change.
@@ -108,8 +106,11 @@ show_changed_files() {
 
     build_rsync_excludes "$source"
 
+    # Match operation lines (see has_changes), then strip the itemize flag
+    # field so paths with spaces survive intact.
     rsync -anc --itemize-changes "${RSYNC_EXCLUDES[@]}" "$source/" "$dest/" 2>/dev/null \
-        | awk '/^[<>ch].f/ {print "  " $NF}' \
+        | grep -E '^[<>ch]' \
+        | sed -E 's/^[^ ]+ /  /' \
         | head -30
 }
 
@@ -190,29 +191,133 @@ check_uv() {
 
 # === Install directory selection ===
 
+# Scan immediate subdirectories of $1 for Hearth installs, identified by the
+# presence of BOTH hearth.py and a hearthmonitor/ directory (specific enough to
+# avoid matching a stray hearth.py). Prints each matching path on its own line.
+scan_for_installs() {
+    local parent="$1"
+    local sub
+    for sub in "$parent"/*/; do
+        [[ -d "$sub" ]] || continue
+        if [[ -f "${sub}hearth.py" && -d "${sub}hearthmonitor" ]]; then
+            echo "${sub%/}"
+        fi
+    done
+}
+
+# Resolve HEARTH_DIR / INSTALL_DIR for a fresh install under $1.
+# Empty/new directory -> ask whether to install directly or in a Hearth subfolder.
+# Non-empty directory  -> treat as the parent and create a Hearth subfolder.
+resolve_fresh_install() {
+    local input="$1"
+    if [[ ! -d "$input" || -z "$(ls -A "$input" 2>/dev/null)" ]]; then
+        echo
+        echo "Directory '$input' is empty or does not exist yet."
+        echo "  Install directly here:        $input"
+        echo "  Or create a Hearth subfolder: $input/$INSTALL_DIR_NAME"
+        if confirm "Install Hearth directly into '$input'? (No = create a '$INSTALL_DIR_NAME' subfolder)"; then
+            HEARTH_DIR="$input"
+            INSTALL_DIR="$(dirname "$input")"
+        else
+            INSTALL_DIR="$input"
+            HEARTH_DIR="$input/$INSTALL_DIR_NAME"
+        fi
+    else
+        INSTALL_DIR="$input"
+        HEARTH_DIR="$input/$INSTALL_DIR_NAME"
+    fi
+}
+
 get_install_dir() {
     local input
-    prompt_read input "Enter the directory to install Hearth (leave blank for current directory): "
+    prompt_read input "Enter the directory where Hearth should be installed/updated (files are only installed to the Hearth directory so to uninstall just delete). Leave blank for current directory: "
     if [[ -z "$input" ]]; then
         input="$(pwd)"
     fi
     input="${input/#\~/$HOME}"
+    # Strip a trailing slash (but never reduce "/" to empty) so dirname and
+    # path comparisons behave predictably.
+    if [[ "$input" != "/" ]]; then
+        input="${input%/}"
+    fi
 
-    if [[ ! -d "$input" ]]; then
-        if confirm "Directory '$input' does not exist. Create it?"; then
-            mkdir -p "$input" || { echo "Failed to create '$input'. Aborting."; exit 1; }
+    # Resolve where Hearth lives (or will be created), in priority order:
+    #   1. <input>/hearth.py            -> user pointed at the install dir itself
+    #   2. <input>/Hearth/hearth.py     -> parent of a standard installer install
+    #   3. <input>/hearth/hearth.py     -> parent of a lowercase (git clone) checkout
+    #   4. subdir scan                  -> parent of a custom-named install (e.g. hearth-main)
+    #   5. fresh install                -> empty/new (ask) or non-empty (create subfolder)
+    if [[ -f "$input/hearth.py" ]]; then
+        HEARTH_DIR="$input"
+        INSTALL_DIR="$(dirname "$input")"
+        echo "Detected existing Hearth installation at: $HEARTH_DIR"
+    elif [[ -f "$input/$INSTALL_DIR_NAME/hearth.py" ]]; then
+        INSTALL_DIR="$input"
+        HEARTH_DIR="$input/$INSTALL_DIR_NAME"
+        echo "Detected existing Hearth installation at: $HEARTH_DIR"
+    elif [[ -f "$input/hearth/hearth.py" ]]; then
+        INSTALL_DIR="$input"
+        HEARTH_DIR="$input/hearth"
+        echo "Detected existing Hearth installation at: $HEARTH_DIR"
+    else
+        # No standard-named install found. Scan immediate subdirs for a
+        # custom-named install before falling back to a fresh install.
+        local scanned
+        mapfile -t scanned < <(scan_for_installs "$input")
+
+        if [[ ${#scanned[@]} -eq 1 ]]; then
+            echo
+            echo "Found a Hearth installation at: ${scanned[0]}"
+            if confirm "Update this installation?"; then
+                HEARTH_DIR="${scanned[0]}"
+                INSTALL_DIR="$input"
+            else
+                resolve_fresh_install "$input"
+            fi
+        elif [[ ${#scanned[@]} -gt 1 ]]; then
+            echo
+            echo "Multiple Hearth installations found under '$input':"
+            local i
+            for i in "${!scanned[@]}"; do
+                echo "  $((i + 1)). ${scanned[i]}"
+            done
+            echo "  0. None of these (fresh install)"
+            local choice
+            prompt_read choice "Enter the number to update (0 for fresh install): "
+            if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#scanned[@]} )); then
+                HEARTH_DIR="${scanned[$((choice - 1))]}"
+                INSTALL_DIR="$input"
+            else
+                resolve_fresh_install "$input"
+            fi
+        else
+            resolve_fresh_install "$input"
+        fi
+    fi
+
+    # Ensure the parent directory exists (create for fresh installs if needed).
+    if [[ ! -d "$INSTALL_DIR" ]]; then
+        if confirm "Directory '$INSTALL_DIR' does not exist. Create it?"; then
+            mkdir -p "$INSTALL_DIR" || { echo "Failed to create '$INSTALL_DIR'. Aborting."; exit 1; }
         else
             echo "Aborting."
             exit 1
         fi
     fi
 
-    if [[ ! -w "$input" ]]; then
-        echo "Directory '$input' is not writable. Aborting."
-        exit 1
+    # Writability check depends on whether we're updating an existing Hearth
+    # directory (write into it) or creating one inside the parent (write into parent).
+    if [[ -d "$HEARTH_DIR" ]]; then
+        if [[ ! -w "$HEARTH_DIR" ]]; then
+            echo "Directory '$HEARTH_DIR' is not writable. Aborting."
+            exit 1
+        fi
+    else
+        if [[ ! -w "$INSTALL_DIR" ]]; then
+            echo "Directory '$INSTALL_DIR' is not writable. Aborting."
+            exit 1
+        fi
     fi
-
-    INSTALL_DIR="$input"
 }
 
 # === Source preparation (temp clone) ===
@@ -228,9 +333,78 @@ prepare_source() {
 
 # === Install / update flow ===
 
+# If $1 is a git checkout, handle it safely before any installer overlay.
+# Uses -e (not -d) so it detects BOTH a base repo's .git directory AND a
+# submodule's .git file.
+#
+# Mode ($2, optional):
+#   "full"       (default, used for the base): clean tree -> warn + confirm;
+#                dirty tree -> abort/discard menu.
+#   "dirty-only" (used for apps): clean tree -> proceed silently;
+#                dirty tree -> abort/discard menu.
+#
+# Returns 0 to proceed with the overlay, 1 to NOT proceed. The caller decides
+# what "don't proceed" means (the base exits the script; an app skips itself).
+check_git_managed() {
+    local dir="$1"
+    local mode="${2:-full}"
+
+    [[ -e "$dir/.git" ]] || return 0   # not a git checkout (catches submodule .git FILES too)
+
+    # Dirty = uncommitted changes to tracked files (what an overlay would clobber).
+    # Untracked files are safe (rsync never removes files absent from the source),
+    # so we ignore them. A non-zero exit (changes OR git error) is treated as
+    # dirty, erring on the side of caution.
+    local dirty=0
+    git -C "$dir" diff --quiet HEAD -- 2>/dev/null || dirty=1
+
+    if [[ $dirty -eq 0 ]]; then
+        # Clean working tree.
+        if [[ "$mode" == "dirty-only" ]]; then
+            return 0   # app folder, nothing at risk: proceed quietly
+        fi
+        echo
+        echo "Note: '$dir' is a git repository — Hearth appears to have been obtained here via git."
+        echo "This installer updates by overlaying files, which can leave the checkout in a"
+        echo "git-modified state. To update a git checkout normally, use 'git pull' instead."
+        if confirm "Proceed with an installer-style update anyway?"; then
+            return 0
+        fi
+        echo "Leaving '$dir' unchanged. Use 'git pull' to update this checkout."
+        return 1
+    fi
+
+    # Dirty working tree (both modes present the menu).
+    echo
+    echo "WARNING: '$dir' is a git checkout with uncommitted changes to tracked files"
+    echo "that an installer update would overwrite."
+    echo
+    echo "  1. Leave it alone (recommended)."
+    echo "       To update while KEEPING your changes, use 'git pull'."
+    echo "       To use the installer instead, commit or stash your changes first, then re-run."
+    echo "  2. Discard my uncommitted changes and update."
+    echo
+    local choice
+    prompt_read choice "Enter choice [1/2] (default 1): "
+    case "$choice" in
+        2)
+            echo "Discarding uncommitted changes (git reset --hard HEAD)..."
+            if git -C "$dir" reset --hard HEAD; then
+                return 0
+            fi
+            echo "Failed to discard changes. Leaving '$dir' unchanged."
+            return 1
+            ;;
+        *)
+            echo "Leaving '$dir' unchanged to protect your changes."
+            return 1
+            ;;
+    esac
+}
+
 install_or_update_main() {
-    local hearth_dir="$INSTALL_DIR/$INSTALL_DIR_NAME"
-    HEARTH_DIR="$hearth_dir"
+    # HEARTH_DIR was already resolved by get_install_dir (with smart detection).
+    local hearth_dir="$HEARTH_DIR"
     local source_main="$TEMP_SOURCE/hearth"
 
     # Sanity check: directory exists and has content but no hearth.py
@@ -257,6 +431,7 @@ install_or_update_main() {
         echo "✓ Hearth base installed."
     else
         echo "Existing Hearth install found at '$hearth_dir'."
+        check_git_managed "$hearth_dir" || exit 0
         echo "Checking for updates..."
 
         if has_changes "$source_main" "$hearth_dir"; then
@@ -326,6 +501,10 @@ handle_submodules() {
                 echo "NOTE: User data files are preserved. Local code modifications will be overwritten."
                 echo
                 if confirm "Update '$name'?"; then
+                    # Protect uncommitted work if this app folder is itself a git
+                    # checkout (e.g. from a recursive clone). dirty-only: clean or
+                    # non-git apps proceed silently; a dirty app gets the menu.
+                    check_git_managed "$install_path" "dirty-only" || continue
                     sync_component "$source_path" "$install_path" "$name" || continue
                     echo "✓ $name updated."
                 else
@@ -370,7 +549,7 @@ main() {
     echo
     echo "=== Done ==="
     echo "Hearth is at: $HEARTH_DIR"
-    echo "To run: cd '$HEARTH_DIR' && uv run hearth.py"
+    echo "To get started: cd '$HEARTH_DIR/hearthmonitor' && uv run hearthmonitor.py"
 }
 
 main "$@"
