@@ -34,6 +34,8 @@ METADATA_EXCLUDES=(
     ".gitignore"
     ".gitmodules"
     "hearth-install.sh"
+    "AppPics"
+    "AppPics.html"
 )
 
 # === Globals ===
