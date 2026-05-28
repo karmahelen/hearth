@@ -34,6 +34,7 @@ METADATA_EXCLUDES=(
     ".gitignore"
     ".gitmodules"
     "hearth-install.sh"
+    "hearth-sys-depends.sh"
     "AppPics"
     "AppPics.html"
 )
