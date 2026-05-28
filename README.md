@@ -4,7 +4,7 @@ Hearth is a framework designed in Python that helps deploy personal Python apps 
 
 For years, I have built GUIs for my personal apps using Tkinter. I was frustrated with the styling and animation aspects that could be achieved so I looked into other methods of creating more modern/rich GUIs. I ended up deciding to take the approach where the UI would be built using html/css and the UX handled by javascript. This project was born from that path. After realizing that the UI/UX elements could be implemented using standard web technologies, Hearth was developed to facilitate generating the UI either in a desktop ("normal") mode utilizing pywebview and/or serving it as a webpage directly using Flask. While also providing the "shimming" necessary to link the javascript aspect of the UX to the underlying python code of the app.
 
-HearthMonitor is the GUI interface of the Hearth framework for managing the Hearth ecosystem. It provides a way to configure settings for how Hearth runs and dealing with the personal apps that have been developed under this framework.
+HearthMonitor is the GUI interface of the Hearth framework for managing the Hearth ecosystem. It provides a way to configure settings for how Hearth runs and dealing with the personal apps that have been developed under this framework. Check out the "HearthMonitor Pics" below to see what it looks like and get a sense of what it can do.
 
 ## Features
 * Utilizes the following Python packages:
@@ -44,8 +44,15 @@ NOTE: If you decided not to install UV and manage the python packages manually, 
 ## Uninstall
 Everything is self-contained to the folder you install to so if you don't like it you can just delete the folder to remove/uninstall. If you do install UV, that is doing it's own thing and you have to look at their documentation for removal/clean-up.
 
-## App Pics
+## HearthMonitor Pics
 [![View App Pics](https://img.shields.io/badge/App-Pics-blue)](https://karmahelen.github.io/hearth/AppPics.html)
+
+## Hearth Apps
+The following apps are available that have been built under this framework:
+
+xpwpatchbay - https://github.com/karmahelen/xpwpatchbay
+
+xstocks - https://github.com/karmahelen/xstocks
 
 ## Background
 I started development of this project for my own personal purposes on my Linux Mint. As I started building it up, I thought that this might be worthwhile to share. As a solo developer, I have currently only been able to fully test it out on Linux Mint 22.2 Cinnamon. I believe it should work with current releases of Ubuntu and potentially other similar Linux distros. If I can strike up interest, I would love to continue developing this for a broader audience but I need feedback. You can reach out to me at:
