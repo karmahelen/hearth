@@ -44,6 +44,7 @@ INSTALL_DIR=""
 HEARTH_DIR=""
 TEMP_SOURCE=""
 RSYNC_EXCLUDES=()
+EXTRA_BASE_EXCLUDES=()
 
 # === Cleanup on exit (always runs, even on Ctrl-C or errors) ===
 cleanup() {
@@ -70,7 +71,10 @@ confirm() {
 }
 
 # Build rsync exclude args for a given source directory.
-# Combines hardcoded metadata excludes with the source's .gitignore patterns.
+# Combines hardcoded metadata excludes, the source's .gitignore patterns,
+# and (when building excludes for a BASE sync) any submodule placeholder paths
+# in EXTRA_BASE_EXCLUDES — to prevent empty submodule directories from being
+# created on disk before the user has chosen which apps to install.
 # Sets the global RSYNC_EXCLUDES array.
 build_rsync_excludes() {
     local source_dir="$1"
@@ -82,6 +86,14 @@ build_rsync_excludes() {
 
     if [[ -f "$source_dir/.gitignore" ]]; then
         RSYNC_EXCLUDES+=("--exclude-from=$source_dir/.gitignore")
+    fi
+
+    # EXTRA_BASE_EXCLUDES is set to submodule paths just before the base sync,
+    # and cleared afterward, so per-submodule syncs aren't affected.
+    if [[ ${#EXTRA_BASE_EXCLUDES[@]} -gt 0 ]]; then
+        for item in "${EXTRA_BASE_EXCLUDES[@]}"; do
+            RSYNC_EXCLUDES+=("--exclude=$item")
+        done
     fi
 }
 
@@ -410,6 +422,16 @@ install_or_update_main() {
     local hearth_dir="$HEARTH_DIR"
     local source_main="$TEMP_SOURCE/hearth"
 
+    # Populate EXTRA_BASE_EXCLUDES with submodule paths so that empty
+    # placeholder directories from the git clone aren't copied into the user's
+    # install. (Apps are installed individually only when the user opts in.)
+    EXTRA_BASE_EXCLUDES=()
+    if [[ -f "$source_main/.gitmodules" ]]; then
+        mapfile -t EXTRA_BASE_EXCLUDES < <(
+            git -C "$source_main" config --file .gitmodules --get-regexp 'submodule\..*\.path' | awk '{print $2}'
+        )
+    fi
+
     # Sanity check: directory exists and has content but no hearth.py
     if [[ -d "$hearth_dir" && -n "$(ls -A "$hearth_dir" 2>/dev/null)" && ! -f "$hearth_dir/hearth.py" ]]; then
         echo
@@ -417,6 +439,7 @@ install_or_update_main() {
         echo "Installing here will overlay Hearth files onto existing content."
         if ! confirm "Proceed anyway?"; then
             echo "Aborting."
+            EXTRA_BASE_EXCLUDES=()
             exit 1
         fi
     fi
@@ -430,11 +453,11 @@ install_or_update_main() {
     echo
     if [[ $is_existing -eq 0 ]]; then
         echo "Installing Hearth base to '$hearth_dir'..."
-        sync_component "$source_main" "$hearth_dir" "Hearth base" || exit 1
+        sync_component "$source_main" "$hearth_dir" "Hearth base" || { EXTRA_BASE_EXCLUDES=(); exit 1; }
         echo "✓ Hearth base installed."
     else
         echo "Existing Hearth install found at '$hearth_dir'."
-        check_git_managed "$hearth_dir" || exit 0
+        check_git_managed "$hearth_dir" || { EXTRA_BASE_EXCLUDES=(); exit 0; }
         echo "Checking for updates..."
 
         if has_changes "$source_main" "$hearth_dir"; then
@@ -446,7 +469,7 @@ install_or_update_main() {
             echo "to tracked code files will be overwritten."
             echo
             if confirm "Apply update?"; then
-                sync_component "$source_main" "$hearth_dir" "Hearth base" || exit 1
+                sync_component "$source_main" "$hearth_dir" "Hearth base" || { EXTRA_BASE_EXCLUDES=(); exit 1; }
                 echo "✓ Hearth base updated."
             else
                 echo "Skipping Hearth base update."
@@ -455,6 +478,10 @@ install_or_update_main() {
             echo "✓ Hearth base is up to date."
         fi
     fi
+
+    # Clear so subsequent build_rsync_excludes calls (for per-submodule syncs
+    # and change checks) aren't affected by the base-only excludes.
+    EXTRA_BASE_EXCLUDES=()
 }
 
 handle_submodules() {
