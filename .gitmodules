@@ -4,3 +4,6 @@
 [submodule "xstocks"]
 	path = xstocks
 	url = https://github.com/karmahelen/xstocks
+[submodule "xnote"]
+	path = xnote
+	url = https://github.com/karmahelen/xnote
