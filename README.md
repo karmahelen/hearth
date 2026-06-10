@@ -50,6 +50,8 @@ Everything is self-contained to the folder you install to so if you don't like i
 ## Hearth Apps
 The following apps are available that have been built under this framework:
 
+xlist - https://github.com/karmahelen/xlist
+
 xnote - https://github.com/karmahelen/xnote
 
 xpwpatchbay - https://github.com/karmahelen/xpwpatchbay
