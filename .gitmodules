@@ -7,3 +7,6 @@
 [submodule "xnote"]
 	path = xnote
 	url = https://github.com/karmahelen/xnote
+[submodule "xlist"]
+	path = xlist
+	url = https://github.com/karmahelen/xlist
