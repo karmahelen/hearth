@@ -496,6 +496,18 @@ html, body {
     display: none;
 }
 
+/* Docker mode: the settings form hides and the notice shows in its place
+   (see openSettingsDialog in hearthmonitor.js). The .modal-note.hidden rule
+   also supplies the display:none that the "Takes effect on next launch"
+   notes' class toggles always assumed — the JS toggled `hidden` on
+   .modal-note elements, but only .modal-overlay and .modal-warning had a
+   matching rule, so those notes never actually hid. */
+#settings-form.hidden,
+.modal-note.hidden,
+.btn-modal-primary.hidden {
+    display: none;
+}
+
 .modal-buttons {
     display: flex;
     justify-content: flex-end;

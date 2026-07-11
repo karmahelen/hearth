@@ -15,6 +15,7 @@ hearthmonitor — GUI interface for managing hearth and related apps.
 
 Run:
     [uv run] hearthmonitor.py            # native window
+    [uv run] hearthmonitor.py --serve    # LAN web access
 
 Developer:  KarmaHelen
 Contact:    hearth.visible772@passinbox.com
@@ -45,6 +46,26 @@ logging.getLogger("werkzeug").addFilter(_QuietPollFilter())
 BASE_DIR = Path(__file__).resolve().parent
 HEARTH_ROOT = BASE_DIR.parent
 HEARTH_CONFIG_PATH = HEARTH_ROOT / "hearth.json"
+
+# Docker mode — asserted by the Hearth container image via ENV HEARTH_DOCKER=1.
+# Deliberately an environment read rather than a hearth.json field: config
+# holds user *preferences* (aliases, tray, terminal, password); docker-ness is
+# a *fact about the runtime*. Persisting a runtime fact into user data goes
+# stale in both directions when a data directory migrates between container
+# and native installs — the env var self-corrects instantly in either.
+#
+# What it gates: the local-machine surfaces that are meaningless (or silently
+# broken) without a host display and desktop. Frontend gating hides OPEN
+# buttons, the Launchers panel, and the settings modal's form (see
+# get_docker_mode); backend guards on open_app, set_launchers, set_tray_flags,
+# set_terminal_flags, set_uv_mode, and set_monitor_settings enforce the same
+# boundary against direct API calls — serve mode is LAN-exposed, and hidden
+# buttons don't remove endpoints. set_uv_mode is the critical guard: no-uv
+# mode in the container spawns scripts against a system Python with no Flask,
+# so every subsequent app start would crash.
+IS_DOCKER = os.environ.get("HEARTH_DOCKER", "").strip().lower() in ("1", "true", "yes")
+
+_DOCKER_BLOCKED = {"error": "Not available in Docker mode"}
 
 # Linux desktop integration paths. APPS_DIR is the freedesktop.org standard
 # location for per-user application launchers (start-menu entries); the
@@ -283,6 +304,8 @@ class HearthMonitor:
         fails (uv missing while toggling INTO uv mode, file system issue,
         etc.), other apps' refreshes still proceed and the failure is
         reported in the failures list."""
+        if IS_DOCKER:
+            return dict(_DOCKER_BLOCKED)  # docker guard — see IS_DOCKER
         want = bool(enabled)
         config = self._load_monitor_config()
         config["use_uv"] = want
@@ -750,6 +773,8 @@ class HearthMonitor:
         Failures are collected per-app and returned, rather than aborting
         the whole batch — same partial-failure model as set_alias's panel
         path. Successful changes are persisted; the user can fix and retry."""
+        if IS_DOCKER:
+            return dict(_DOCKER_BLOCKED)  # docker guard — see IS_DOCKER
         # uv only needed in uv mode. In no-uv mode, Exec= is just the
         # script path, so we can create launchers without uv being present.
         if self._get_use_uv():
@@ -825,6 +850,8 @@ class HearthMonitor:
         pattern, so the on-disk shape stays clean).
 
         Failures are collected per-app rather than aborting the batch."""
+        if IS_DOCKER:
+            return dict(_DOCKER_BLOCKED)  # docker guard — see IS_DOCKER
         discovered = set(self._discover_apps())
         failures = []
         applied = []
@@ -902,6 +929,8 @@ class HearthMonitor:
 
         `changes` is a list of {name, terminal} dicts. Same partial-success
         and idempotent behavior as set_tray_flags."""
+        if IS_DOCKER:
+            return dict(_DOCKER_BLOCKED)  # docker guard — see IS_DOCKER
         discovered = set(self._discover_apps())
         failures = []
         applied = []
@@ -974,6 +1003,14 @@ class HearthMonitor:
 
     _MONITOR_NAME = "hearthmonitor"
 
+    def get_docker_mode(self):
+        """Report whether the monitor is running inside the Hearth Docker
+        container (HEARTH_DOCKER env — see IS_DOCKER at module top for the
+        full rationale and the list of gated surfaces). The frontend fetches
+        this once at startup, before the first app-list render, and gates
+        the local-machine UI accordingly. Returns {"docker": bool}."""
+        return {"docker": IS_DOCKER}
+
     def get_monitor_settings(self):
         """Return the monitor's own launcher and tray preferences as a
         single bundle for the settings modal. Combines launcher state
@@ -993,6 +1030,7 @@ class HearthMonitor:
         return {
             "uv_path": self._resolve_uv_path(),
             "use_uv": self._get_use_uv(),
+            "docker_mode": IS_DOCKER,
             "categories": list(LAUNCHER_CATEGORIES),
             "start_menu": sm_file.exists(),
             "desktop": dt_file.exists(),
@@ -1013,6 +1051,8 @@ class HearthMonitor:
         'use_uv' fields confirming the persisted values. The halves are
         written independently — failures in one don't prevent the others
         from proceeding, so the user sees exactly what succeeded."""
+        if IS_DOCKER:
+            return dict(_DOCKER_BLOCKED)  # docker guard — see IS_DOCKER
         settings = settings or {}
         result = {"applied": [], "failures": [], "tray": None, "terminal": None, "use_uv": None}
 
@@ -1183,6 +1223,8 @@ class HearthMonitor:
         running. That's a corruption risk on shared SQLite state, and the
         user is expected to know what they're doing.
         """
+        if IS_DOCKER:
+            return dict(_DOCKER_BLOCKED)  # docker guard — see IS_DOCKER
         discovered = set(self._discover_apps())
         if name not in discovered:
             return {"error": f"Unknown app: {name}"}

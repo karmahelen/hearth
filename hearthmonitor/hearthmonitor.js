@@ -3,6 +3,41 @@ let pollTimer = null;
 let latestLogId = 0;
 let autoScroll = true;
 let appsCache = [];          // last get_apps() result; used to look up display_name for log header
+let dockerMode = false;      // set once at startup by initDockerMode(), never changes mid-session
+
+// Docker mode: fetched once at startup, before the first app-list render.
+// When the monitor runs inside the Hearth container (HEARTH_DOCKER env),
+// the local-machine surfaces are gated:
+//
+//   - per-row OPEN buttons — would spawn a window-mode process that dies on
+//     Qt import with stderr discarded (the silent click-and-nothing-happens
+//     failure mode)
+//   - the Launchers panel — writes .desktop files to the container's
+//     invisible filesystem; its Tray and Terminal columns are equally dead
+//     (tray is local-mode-only, terminal wraps OPEN/launcher spawns)
+//   - the settings modal's form — its contents (the monitor's own launcher
+//     + tray sections and the uv toggle) are all local-machine concerns,
+//     and the uv toggle is actively destructive in the container (system
+//     Python has no Flask; no-uv mode would crash every app start)
+//
+// The corresponding backend endpoints carry matching guards — hiding
+// buttons is UX; the guards are correctness, since serve mode is
+// LAN-exposed and hidden buttons don't remove endpoints.
+async function initDockerMode() {
+    try {
+        const result = await app.call('get_docker_mode');
+        dockerMode = !!(result && result.docker);
+    } catch (e) {
+        dockerMode = false;  // endpoint missing (older backend) — assume native
+    }
+    if (dockerMode) {
+        // Launchers is wholly inapplicable in the container — hidden rather
+        // than explained. The settings cogwheel stays visible and explains
+        // itself when opened (see openSettingsDialog), since it's the
+        // designated home for any future docker-specific settings.
+        document.getElementById('btn-launchers').style.display = 'none';
+    }
+}
 
 async function refreshApps() {
     appsCache = await app.call('get_apps');
@@ -98,20 +133,25 @@ function renderAppList(apps) {
             controls.appendChild(startBtn);
         }
 
-        // OPEN button — always present, regardless of serve-mode state.
-        // Launches the app in local mode (its own pywebview window) as a
-        // detached process. The framework's single-instance lockfile (local
-        // mode only) prevents duplicate launches; the backend short-circuits
-        // when an instance is already open and we surface that as a toast.
+        // OPEN button — always present in native mode, regardless of
+        // serve-mode state. Launches the app in local mode (its own
+        // pywebview window) as a detached process. The framework's
+        // single-instance lockfile (local mode only) prevents duplicate
+        // launches; the backend short-circuits when an instance is already
+        // open and we surface that as a toast.
         // Note: the button stays enabled even when the app is in serve mode.
         // Per design, we don't try to prevent serve+local coexistence in the
         // UI — the user is expected to know what they're doing.
-        const openBtn = document.createElement('button');
-        openBtn.className = 'btn-open';
-        openBtn.textContent = 'Open';
-        openBtn.title = 'Open ' + a.display_name + ' in a window on this machine';
-        openBtn.onclick = (e) => { e.stopPropagation(); openApp(a.name, a.display_name); };
-        controls.appendChild(openBtn);
+        // In docker mode the button is omitted entirely — there's no host
+        // display for a window to open on (see initDockerMode).
+        if (!dockerMode) {
+            const openBtn = document.createElement('button');
+            openBtn.className = 'btn-open';
+            openBtn.textContent = 'Open';
+            openBtn.title = 'Open ' + a.display_name + ' in a window on this machine';
+            openBtn.onclick = (e) => { e.stopPropagation(); openApp(a.name, a.display_name); };
+            controls.appendChild(openBtn);
+        }
 
         row.appendChild(indicator);
         row.appendChild(nameEl);
@@ -386,7 +426,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    refreshApps();
+    // Resolve docker mode before the first render — renderAppList reads the
+    // flag when deciding whether OPEN buttons exist, so ordering matters.
+    initDockerMode().then(refreshApps);
 });
 
 // ---------------------------------------------------------------------------
@@ -1019,6 +1061,32 @@ let settingsLoaded = {};
 let settingsUvPath = null;
 
 async function openSettingsDialog() {
+    // Docker mode: every control in this modal (uv toggle, launcher rows,
+    // tray) is a local-machine concern with no meaning in the container.
+    // The modal shell still opens — the control stays discoverable and
+    // explains itself, and remains the home for any future docker-specific
+    // settings — but shows an honest notice instead of the form. Apply is
+    // hidden (nothing can be applied) and Cancel reads Close. dockerMode
+    // never changes mid-session, but both branches set full state so the
+    // dialog is correct regardless of history.
+    const form = document.getElementById('settings-form');
+    const dockerNote = document.getElementById('settings-docker-note');
+    const applyBtn = document.getElementById('btn-settings-apply');
+    const cancelBtn = document.getElementById('btn-settings-cancel');
+    if (dockerMode) {
+        form.classList.add('hidden');
+        dockerNote.classList.remove('hidden');
+        applyBtn.classList.add('hidden');
+        cancelBtn.textContent = 'Close';
+        clearSettingsError();
+        document.getElementById('settings-modal').classList.remove('hidden');
+        return;
+    }
+    form.classList.remove('hidden');
+    dockerNote.classList.add('hidden');
+    applyBtn.classList.remove('hidden');
+    cancelBtn.textContent = 'Cancel';
+
     const result = await app.call('get_monitor_settings');
     settingsUvPath = result.uv_path;
 

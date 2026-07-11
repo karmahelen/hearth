@@ -42,48 +42,56 @@
         <div class="modal-panel" onclick="event.stopPropagation()">
             <div class="modal-title">Hearth Monitor Settings</div>
 
-            <div class="settings-row">
-                <label class="settings-checkbox-label" title="When unchecked, apps run directly via their shebang and you manage Python and packages yourself">
-                    <input type="checkbox" id="settings-use-uv">
-                    <span>Run using uv</span>
-                </label>
-            </div>
-            <div id="settings-uv-banner" class="modal-warning hidden"></div>
+            <!-- Docker mode replaces the form with this notice — every
+                 control below is a local-machine concern with no meaning in
+                 the container. See openSettingsDialog(). -->
+            <div id="settings-docker-note" class="modal-note hidden">No Settings Currently Available for Docker Mode</div>
 
-            <div class="settings-section-label">Launcher</div>
-            <div class="settings-row">
-                <label class="settings-checkbox-label">
-                    <input type="checkbox" id="settings-start-menu">
-                    <span>Start Menu</span>
-                </label>
-                <label class="settings-checkbox-label">
-                    <input type="checkbox" id="settings-desktop">
-                    <span>Desktop</span>
-                </label>
-            </div>
-            <div class="settings-row">
-                <label class="settings-field-label" for="settings-category">Category</label>
-                <select id="settings-category" class="launcher-category-select"></select>
-            </div>
-            <div class="settings-row">
-                <label class="settings-checkbox-label" title="Run in a terminal window (useful for debugging)">
-                    <input type="checkbox" id="settings-terminal">
-                    <span>Terminal (run in terminal window for debugging)</span>
-                </label>
+            <div id="settings-form">
+                <div class="settings-row">
+                    <label class="settings-checkbox-label" title="When unchecked, apps run directly via their shebang and you manage Python and packages yourself">
+                        <input type="checkbox" id="settings-use-uv">
+                        <span>Run using uv</span>
+                    </label>
+                </div>
+                <div id="settings-uv-banner" class="modal-warning hidden"></div>
+
+                <div class="settings-section-label">Launcher</div>
+                <div class="settings-row">
+                    <label class="settings-checkbox-label">
+                        <input type="checkbox" id="settings-start-menu">
+                        <span>Start Menu</span>
+                    </label>
+                    <label class="settings-checkbox-label">
+                        <input type="checkbox" id="settings-desktop">
+                        <span>Desktop</span>
+                    </label>
+                </div>
+                <div class="settings-row">
+                    <label class="settings-field-label" for="settings-category">Category</label>
+                    <select id="settings-category" class="launcher-category-select"></select>
+                </div>
+                <div class="settings-row">
+                    <label class="settings-checkbox-label" title="Run in a terminal window (useful for debugging)">
+                        <input type="checkbox" id="settings-terminal">
+                        <span>Terminal (run in terminal window for debugging)</span>
+                    </label>
+                </div>
+
+                <div class="settings-section-label">Tray</div>
+                <div class="settings-row">
+                    <label class="settings-checkbox-label">
+                        <input type="checkbox" id="settings-tray">
+                        <span>Run in system tray</span>
+                    </label>
+                </div>
+
+                <div class="modal-note modal-note-dim hidden" id="settings-takes-effect">Terminal and Tray takes effect on next launch.</div>
             </div>
 
-            <div class="settings-section-label">Tray</div>
-            <div class="settings-row">
-                <label class="settings-checkbox-label">
-                    <input type="checkbox" id="settings-tray">
-                    <span>Run in system tray</span>
-                </label>
-            </div>
-
-            <div class="modal-note modal-note-dim hidden" id="settings-takes-effect">Terminal and Tray takes effect on next launch.</div>
             <div class="modal-warning hidden" id="settings-error"></div>
             <div class="modal-buttons">
-                <button class="btn-modal-secondary" onclick="closeSettingsDialog()">Cancel</button>
+                <button id="btn-settings-cancel" class="btn-modal-secondary" onclick="closeSettingsDialog()">Cancel</button>
                 <button id="btn-settings-apply" class="btn-modal-primary" onclick="applySettingsDialog()" disabled>Apply</button>
             </div>
         </div>
