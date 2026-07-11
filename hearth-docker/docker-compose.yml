@@ -1,0 +1,49 @@
+# Hearth — serve-only container
+#
+# Data layout (single bind mount, created next to this file):
+#   ./data/Hearth/     code + user data (hearth.json, SQLite — gitignore-
+#                      protected across updates by the installer's rsync)
+#   ./data/uv-cache/   uv wheel cache + PEP 723 script environments
+#                      (disposable — safe to delete to force clean re-resolve)
+#
+# Back up ./data/Hearth.
+
+services:
+  hearth:
+    build: .
+    container_name: hearth
+    # init: docker's tini as PID 1 — guarantees SIGTERM from `docker stop`
+    # reaches hearthmonitor regardless of how uv chains into python, so
+    # hearth.py's SIGTERM handler always gets to shut managed apps down.
+    init: true
+    environment:
+      # Seed only (write-once): applied when hearth.json has no password,
+      # ignored afterward. Manage the password in Hearth Monitor from then
+      # on; to reset, edit ./data/Hearth/hearth.json and restart.
+      HEARTH_PASSWORD: "changeme"
+
+      # Defaults shown — uncomment to override:
+      # HEARTH_UPDATE: always        # always | missing | never
+      # HEARTH_REF: main             # branch or tag to track
+      # HEARTH_APPS: all             # all | none | csv (xnote,xlist,...)
+      # HEARTH_PORT: "8000"          # hearthmonitor serve port
+    ports:
+      - "8000:8000"                  # hearthmonitor
+      - "8001-8050:8001-8050"        # apps started in serve mode — adjust
+                                     # the range to match your apps' ports
+    volumes:
+      - ./data:/data
+      # Named-volume alternative (Docker-managed storage instead of a local
+      # folder — also uncomment the top-level volumes block below):
+      # - hearth-data:/data
+    restart: unless-stopped
+    # NOTE: with HEARTH_UPDATE=always (the default), restart-on-boot also
+    # means update-on-boot. Pin HEARTH_REF to a tag if that's too eager.
+
+    # Linux-host alternative to port ranges: comment out `ports:` above and
+    # uncomment the line below. Apps then bind exactly the ports they would
+    # natively, with no range bookkeeping.
+    # network_mode: host
+
+# volumes:
+#   hearth-data:
