@@ -52,6 +52,8 @@ The following apps are available that have been built under this framework:
 
 xlist - https://github.com/karmahelen/xlist
 
+xnetperf - https://github.com/karmahelen/xnetperf
+
 xnote - https://github.com/karmahelen/xnote
 
 xpwpatchbay - https://github.com/karmahelen/xpwpatchbay

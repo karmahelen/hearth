@@ -10,3 +10,6 @@
 [submodule "xlist"]
 	path = xlist
 	url = https://github.com/karmahelen/xlist
+[submodule "xnetperf"]
+	path = xnetperf
+	url = https://github.com/karmahelen/xnetperf
