@@ -146,10 +146,13 @@ def _rewrite_hearth_name_elements(html_content, anchor_name, display_name):
 
 def _get_api_methods(app):
     """Return a dict of {name: bound_method} for all public methods on app.
-    Excludes page_ prefixed methods (those become HTML GET routes)."""
+    Excludes page_ prefixed methods (those become HTML GET routes) and raw_
+    prefixed methods (those become pass-through GET/POST routes)."""
     methods = {}
     for name, func in inspect.getmembers(app, predicate=inspect.ismethod):
-        if not name.startswith('_') and not name.startswith('page_'):
+        if (not name.startswith('_')
+                and not name.startswith('page_')
+                and not name.startswith('raw_')):
             methods[name] = func
     return methods
 
@@ -161,6 +164,28 @@ def _get_page_methods(app):
     for name, func in inspect.getmembers(app, predicate=inspect.ismethod):
         if name.startswith('page_'):
             route_name = name[5:]  # strip 'page_' prefix
+            methods[route_name] = func
+    return methods
+
+
+def _get_raw_methods(app):
+    """Return a dict of {route_name: bound_method} for raw_ prefixed methods.
+
+    raw_ methods are the escape hatch from Hearth's conventions: they receive
+    the Flask request object and return whatever Flask's view layer accepts
+    (a Response, a streaming generator, a (body, status, headers) tuple, etc.)
+    with no JSON envelope and no forced mimetype. They are registered for both
+    GET and POST at /raw/<name>, so a single method handles whichever verb it
+    expects (branch on request.method if it serves both).
+
+    Use these only when the standard api_/page_/upload routes genuinely don't
+    fit — bulk binary streaming, custom headers, reading the request body
+    incrementally. raw_download becomes /raw/download, raw_upload becomes
+    /raw/upload, etc."""
+    methods = {}
+    for name, func in inspect.getmembers(app, predicate=inspect.ismethod):
+        if name.startswith('raw_'):
+            route_name = name[4:]  # strip 'raw_' prefix
             methods[route_name] = func
     return methods
 
@@ -213,6 +238,23 @@ const app = {
             };
             input.click();
         });
+    },
+    copyText: (text) => {
+        // Qt WebEngine has no usable async clipboard API (navigator.clipboard is
+        // undefined over LAN http — not a secure context — and crashes in the
+        // embed). execCommand('copy') against a transient off-screen textarea
+        // works in both local and serve modes. Synchronous — must be called
+        // inside a user gesture (e.g. a click handler). Returns whether it copied.
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        document.body.removeChild(ta);
+        return ok;
     }
 };
 </script>
@@ -353,7 +395,7 @@ def _wrap_call(func, params):
 # Flask server builder
 # ---------------------------------------------------------------------------
 
-def _create_server(app, methods, page_methods, html, static_dir, config, enable_auth, display_name):
+def _create_server(app, methods, page_methods, raw_methods, html, static_dir, config, enable_auth, display_name):
     """Build and return a Flask app with API routes and static file serving."""
     from flask import Flask, request, jsonify, Response, session, redirect, send_from_directory
 
@@ -372,7 +414,7 @@ def _create_server(app, methods, page_methods, html, static_dir, config, enable_
             if request.path == '/login':
                 return None
             if not session.get('authenticated'):
-                if request.path.startswith('/api/') or request.path == '/upload' or request.path.startswith('/page/'):
+                if request.path.startswith('/api/') or request.path == '/upload' or request.path.startswith('/page/') or request.path.startswith('/raw/'):
                     return jsonify({"ok": False, "error": "Not authenticated"}), 401
                 return redirect('/login')
             return None
@@ -503,6 +545,30 @@ def _create_server(app, methods, page_methods, html, static_dir, config, enable_
             endpoint=f'page_{route_name}',
             view_func=make_page_handler(page_func),
             methods=['GET']
+        )
+
+    # Raw routes (raw_ methods → GET+POST /raw/<name>, pass-through response)
+    # Unlike api_/page_, these receive the Flask `request` object and return
+    # whatever Flask's view layer accepts — a Response, a streaming generator,
+    # a (body, status, headers) tuple. Hearth does not wrap, re-encode, or
+    # set a mimetype; the method is in full control. This is the escape hatch
+    # for bulk binary I/O (e.g. throughput streaming) where the JSON envelope
+    # and forced text/html of the other route types get in the way.
+    for route_name, raw_func in raw_methods.items():
+        def make_raw_handler(func):
+            def handler(**kwargs):
+                try:
+                    return func(request, **kwargs)
+                except Exception as e:
+                    traceback.print_exc()
+                    return Response(f"Error: {e}", status=500)
+            handler.__name__ = f"raw_{func.__name__}"
+            return handler
+        server.add_url_rule(
+            f'/raw/{route_name}',
+            endpoint=f'raw_{route_name}',
+            view_func=make_raw_handler(raw_func),
+            methods=['GET', 'POST']
         )
 
     return server
@@ -872,7 +938,7 @@ def _setup_tray(qapp, get_window, app_name, display_name, icon_path):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def run(app, frontend, title="App", port=8080, host="0.0.0.0", window=None):
+def run(app, frontend, title="App", port=8080, host="0.0.0.0", window=None, threaded=False):
     """
     Run the app in either serve mode (--serve) or local pywebview mode.
 
@@ -891,6 +957,15 @@ def run(app, frontend, title="App", port=8080, host="0.0.0.0", window=None):
                   width, height, min_size, background_color, text_select,
                   resizable, fullscreen, frameless, on_top, icon.
                   If icon is not set, auto-detects from .ico or .png in app directory.
+        threaded: Opt-in concurrency for serve mode. Default False preserves the
+                  historical single-threaded behavior (one request handled at a
+                  time) that every existing app was written against. When True,
+                  the serve-mode WSGI server handles each request in its own
+                  thread, so concurrent requests can overlap — required for any
+                  app that serves multiple in-flight requests (e.g. parallel
+                  bulk transfers). Only flip this on for apps that need it AND
+                  follow connection-per-request DB access; see CLAUDE.md. Local
+                  mode is unaffected (it is single-user by construction).
     """
     serve_mode = '--serve' in sys.argv
     if window is None:
@@ -938,15 +1013,16 @@ def run(app, frontend, title="App", port=8080, host="0.0.0.0", window=None):
         html = _rewrite_html_title(html, alias)
         html = _rewrite_hearth_name_elements(html, app_name, alias)
 
-    # Discover API methods and page methods
+    # Discover API methods, page methods, and raw methods
     methods = _get_api_methods(app)
     page_methods = _get_page_methods(app)
+    raw_methods = _get_raw_methods(app)
 
-    if not methods and not page_methods:
+    if not methods and not page_methods and not raw_methods:
         print("[Hearth] Warning: no public methods found on app class.")
 
     # Build the Flask server (auth only in serve mode)
-    server = _create_server(app, methods, page_methods, html, static_dir, config,
+    server = _create_server(app, methods, page_methods, raw_methods, html, static_dir, config,
                             enable_auth=serve_mode, display_name=display_name)
 
     # Register cleanup — atexit is a safety net, try/finally is the primary path.
@@ -976,9 +1052,13 @@ def run(app, frontend, title="App", port=8080, host="0.0.0.0", window=None):
             print(f"  POST /upload")
         for name in sorted(page_methods.keys()):
             print(f"  GET  /page/{name}")
+        for name in sorted(raw_methods.keys()):
+            print(f"  GET+POST /raw/{name}")
+        if threaded:
+            print("[Hearth] Threaded serve mode enabled (concurrent requests)")
         print()
         try:
-            server.run(host=host, port=port, debug=False)
+            server.run(host=host, port=port, debug=False, threaded=threaded)
         except KeyboardInterrupt:
             print("\n[Hearth] Interrupted")
         finally:
