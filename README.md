@@ -1,5 +1,7 @@
 # hearth
 
+![CodeQL Status](https://github.com/karmahelen/hearth/actions/workflows/security-scans.yml/badge.svg)
+
 Hearth is a framework designed in Python that helps deploy personal Python apps in a desktop GUI and/or served as a webpage.
 
 For years, I have built GUIs for my personal apps using Tkinter. I was frustrated with the styling and animation aspects that could be achieved so I looked into other methods of creating more modern/rich GUIs. I ended up deciding to take the approach where the UI would be built using html/css and the UX handled by javascript. This project was born from that path. After realizing that the UI/UX elements could be implemented using standard web technologies, Hearth was developed to facilitate generating the UI either as a "normal" desktop app (local mode) utilizing pywebview and/or serving it as a webpage (serve mode) using Flask. While also providing the "shimming" necessary to link the javascript aspect of the UX to the underlying python code of the app.

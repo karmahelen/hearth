@@ -1,0 +1,63 @@
+name: "Security Auditing Suite"
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  schedule:
+    - cron: '30 4 * * 4' # Runs every Thursday at 4:30 AM UTC
+
+jobs:
+  # 1. CODEQL SCAN
+  codeql-analysis:
+    name: CodeQL Scan
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          # Configured to audit Python backend code alongside frontend Web components
+          languages: |
+            python
+            javascript-typescript
+
+      # Autobuild handles simple configuration and script setups automatically
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  # 2. SEMGREP & BANDIT SCANS
+  sast-scanners:
+    name: Semgrep & Bandit Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Run Bandit (Python Specific Linter remains targeted to Python files)
+      - name: Install and Run Bandit
+        run: |
+          pip install bandit
+          bandit -r . -f txt
+
+      # Semgrep automatically reads your repository, matches rules for Python, JS, and HTML, and runs them
+      - name: Run Semgrep OSS
+        run: |
+          python3 -m pip install semgrep
+          semgrep ci --config=p/security-audit
