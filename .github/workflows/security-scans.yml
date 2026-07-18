@@ -25,10 +25,8 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          # Formatted as a strict YAML list array to ensure proper interpretation
-          languages: ['python', 'javascript-typescript']
+          languages: 'python, javascript-typescript'
 
-      # Natively handles build configurations for web and interpreted structures
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
 
@@ -49,8 +47,6 @@ jobs:
           python-version: '3.11'
 
       # Run Bandit (Python Specific Linter)
-      # Appending "|| true" ensures that if Bandit finds security warnings, it logs them 
-      # but lets the workflow finish successfully so your badge doesn't turn red.
       - name: Install and Run Bandit
         run: |
           pip install bandit
