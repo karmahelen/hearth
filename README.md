@@ -1,6 +1,6 @@
 # hearth
 
-![Code Status](https://github.com/karmahelen/hearth/actions/workflows/security-scans.yml/badge.svg)(https://github.com/karmahelen/hearth/security/code-scanning)
+[![Code Status](https://github.com/karmahelen/hearth/actions/workflows/security-scans.yml/badge.svg)](https://github.com/karmahelen/hearth/security/code-scanning)
 
 Hearth is a framework designed in Python that helps deploy personal Python apps in a desktop GUI and/or served as a webpage.
 
