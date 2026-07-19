@@ -1,6 +1,6 @@
 # hearth
 
-![CodeQL Status](https://github.com/karmahelen/hearth/actions/workflows/security-scans.yml/badge.svg)
+![Code Status](https://github.com/karmahelen/hearth/actions/workflows/security-scans.yml/badge.svg)(https://github.com/karmahelen/hearth/security/code-scanning)
 
 Hearth is a framework designed in Python that helps deploy personal Python apps in a desktop GUI and/or served as a webpage.
 
@@ -84,9 +84,9 @@ Thanks for taking the time to look at this and hopefully you found something of 
 ## Security
 Part of the intention of this project is to create useful apps for personal needs with a focus on keeping control of your data in your own system. I realize it is a "leap of faith" whenever you leverage other's code. I have tried to build the hearth framework and related apps such that the code is as safe and self-contained as possible. Best security practices should be followed by keeping your OS and browser up-to-date.
 
-I have setup a script to also leverage CodeQL, Semgrep, and Bandit auditing. Please let me know if there are other security practices that I should leverage.
+GitHub Actions is set up to perform CodeQL, Semgrep, and Bandit code audits. Please let me know if there are other security practices that I should leverage.
 
-When serving apps, this framework uses Flask's development server. This is not intended to be ran publicly to the internet but only to your local network (directly or through a VPN service). I built in the ability to use security cookies for access control, but also note that API calls (to/from a browser) are sent unencrypted therefore for extra security you can look into leveraging a proxy manager to take advantage of HTTPS for fully encrypting app traffic over your network.
+When serving apps, this framework uses Flask's development server. This is not intended to be ran publicly to the internet but only to your local network (directly or through a VPN). I built in the ability to use security cookies for access control, but also note that API calls (to/from a browser) are sent unencrypted therefore for extra security you can look into leveraging a proxy manager to take advantage of HTTPS for fully encrypting app traffic over your network.
 
 ## License
 GNU GPLv3

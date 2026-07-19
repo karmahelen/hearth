@@ -1,4 +1,4 @@
-name: "Security Auditing Suite"
+name: "CodeQL/Semgrep/Bandit Code Audit"
 
 on:
   push:
