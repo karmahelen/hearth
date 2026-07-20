@@ -20,7 +20,7 @@ HearthMonitor is the GUI interface of the Hearth framework for managing the Hear
     - Setup launcher options
     - Personalize what the apps are called dynamically (App Aliases)
     - Open in desktop mode and/or serve as a webpage to a port on your computer
-    - Set a password for served apps
+    - Set a universal security cookie password for served apps
 
 ## System Dependencies
 Run the following to verify your system has the necessary Qt dependencies (the script will allow you to install anything that is missing):
@@ -71,6 +71,13 @@ To run with docker, download the hearth-docker folder and from the terminal in t
 
 Hearthmonitor will then be accessible from port 8000 from a web browser and the apps can then be served to any port in the range 8001-8050.
 
+## Security
+Part of the intention of this project is to create useful apps for personal needs with a focus on keeping control of your data on your own system. I realize it is a "leap of faith" whenever you leverage other's code. I have tried to build the hearth framework and related apps such that the code is as safe and self-contained as possible. Best security practices should be followed by keeping your OS and browser up to date.
+
+When serving apps, this framework uses Flask's development server. This is not intended to be used on public networks nor the internet but only on your local private network (directly or through a VPN). I built in the ability to use security cookies for access control. API calls (to/from a browser) are sent unencrypted, therefore for extra security, you can look into leveraging a proxy manager to take advantage of HTTPS for fully encrypting app traffic over your network.
+
+GitHub Actions is set up to perform CodeQL, Semgrep, and Bandit code audits on Hearth and all related apps. Please let me know if there are other security practices that I should leverage.
+
 ## Background
 I started development of this project for my own personal purposes on my Linux Mint. As I started building it up, I thought that this might be worthwhile to share. As a solo developer, I have currently only been able to fully test it out on Linux Mint 22.2 Cinnamon. I believe it should work with current releases of Ubuntu and potentially other similar Linux distros. If I can strike up interest, I would love to continue developing this for a broader audience but I need feedback. You can reach out to me at:
 
@@ -80,13 +87,6 @@ hearth.visible772@passinbox.com
 I am still working on better documentation to describe the functionality and features but am waiting to see if there is any real interest before spending too much effort.
 
 Thanks for taking the time to look at this and hopefully you found something of interest!
-
-## Security
-Part of the intention of this project is to create useful apps for personal needs with a focus on keeping control of your data in your own system. I realize it is a "leap of faith" whenever you leverage other's code. I have tried to build the hearth framework and related apps such that the code is as safe and self-contained as possible. Best security practices should be followed by keeping your OS and browser up-to-date.
-
-GitHub Actions is set up to perform CodeQL, Semgrep, and Bandit code audits. Please let me know if there are other security practices that I should leverage.
-
-When serving apps, this framework uses Flask's development server. This is not intended to be ran publicly to the internet but only to your local network (directly or through a VPN). I built in the ability to use security cookies for access control, but also note that API calls (to/from a browser) are sent unencrypted therefore for extra security you can look into leveraging a proxy manager to take advantage of HTTPS for fully encrypting app traffic over your network.
 
 ## License
 GNU GPLv3
